@@ -2,14 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gran Galería Virtual 3D - 12 Obras</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Gran Galería Virtual 3D - Multiplataforma</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       user-select: none;
+      touch-action: none; /* Previene gestos predeterminados del navegador */
     }
 
     #canvas-container {
@@ -17,7 +18,6 @@
       height: 100vh;
     }
 
-    /* Crosshair o mira central */
     #crosshair {
       position: absolute;
       top: 50%;
@@ -46,68 +46,81 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 20;
+      z-index: 30;
       cursor: pointer;
       text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
     #instructions h1 {
       margin-bottom: 10px;
-      font-size: 2.8rem;
-      letter-spacing: 1px;
+      font-size: 2.2rem;
     }
 
     #instructions p {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       color: #ccc;
-      max-width: 600px;
-      line-height: 1.6;
+      max-width: 500px;
+      line-height: 1.5;
     }
 
     /* Tarjeta informativa del cuadro */
     #info-card {
       position: absolute;
-      bottom: 35px;
+      bottom: 25px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(15, 15, 20, 0.92);
       color: #fff;
-      padding: 22px 32px;
+      padding: 18px 24px;
       border-radius: 14px;
       border: 1px solid rgba(255, 255, 255, 0.15);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-      max-width: 550px;
+      max-width: 500px;
       width: 85%;
       display: none;
-      z-index: 15;
+      z-index: 20;
       backdrop-filter: blur(12px);
-      transition: opacity 0.3s ease;
+      box-sizing: border-box;
     }
 
     #info-card h2 {
       margin: 0 0 4px 0;
       color: #f39c12;
-      font-size: 1.6rem;
+      font-size: 1.3rem;
     }
 
     #info-card h4 {
-      margin: 0 0 12px 0;
+      margin: 0 0 8px 0;
       color: #aaa;
       font-weight: 400;
       font-style: italic;
+      font-size: 0.9rem;
     }
 
     #info-card p {
       margin: 0;
-      line-height: 1.5;
-      font-size: 0.95rem;
+      line-height: 1.4;
+      font-size: 0.85rem;
       color: #ddd;
+    }
+
+    /* Contenedor del Joystick para móvil */
+    #joystick-zone {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 120px;
+      height: 120px;
+      z-index: 25;
     }
   </style>
 
-  <!-- Three.js y PointerLockControls -->
+  <!-- Three.js y Librería de Joystick Táctil NippleJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 </head>
 <body>
 
@@ -115,11 +128,7 @@
 
   <div id="instructions">
     <h1>Gran Galería Virtual</h1>
-    <p>Haz clic en cualquier lugar para ingresar al museo.</p>
-    <p style="margin-top: 20px; font-size: 1rem; color: #888;">
-      Controles: <b>W, A, S, D</b> para caminar | <b>Mouse</b> para mirar alrededor<br>
-      Aproximándote a cada obra verás sus detalles. Presiona <b>ESC</b> para liberar el cursor.
-    </p>
+    <p id="controls-hint">Toca aquí para iniciar el recorrido.</p>
   </div>
 
   <div id="info-card">
@@ -128,184 +137,209 @@
     <p id="artwork-desc">Descripción de la obra...</p>
   </div>
 
+  <!-- Zona táctil para el Joystick -->
+  <div id="joystick-zone"></div>
+
   <div id="canvas-container"></div>
 
   <script>
+    // Detección simple de dispositivo móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    const hintEl = document.getElementById('controls-hint');
+    if (isMobile) {
+      hintEl.innerHTML = "Toca para entrar.<br><br><b>Controles táctiles:</b><br>• Joystick izquierdo: Desplazarse<br>• Deslizar pantalla: Mirar alrededor";
+    } else {
+      hintEl.innerHTML = "Haz clic para entrar.<br><br><b>Controles PC:</b><br>• Teclas W, A, S, D: Caminar<br>• Mouse: Mirar alrededor";
+    }
+
     // --- 1. ESCENA Y CÁMARA ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0a0c);
-    scene.fog = new THREE.FogExp2(0x0a0a0c, 0.025); // Niebla atmosférica para dar sensación de profundidad
+    scene.fog = new THREE.FogExp2(0x0a0a0c, 0.025);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
+    camera.position.set(0, 1.7, 18);
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- 2. CONTROLES Y MOVIMIENTO ---
-    const controls = new THREE.PointerLockControls(camera, document.body);
+    // --- 2. CONTROLES Y SISTEMA DE MOVIMIENTO ---
     const instructions = document.getElementById('instructions');
+    let isGameActive = false;
 
-    instructions.addEventListener('click', () => controls.lock());
-    controls.addEventListener('lock', () => instructions.style.display = 'none');
-    controls.addEventListener('unlock', () => instructions.style.display = 'flex');
+    // Movimiento
+    let moveForward = 0, moveSide = 0; // -1 a 1 para joysticks/teclado
 
-    scene.add(controls.getObject());
+    if (!isMobile) {
+      // --- CONTROLES PC (PointerLock) ---
+      const controls = new THREE.PointerLockControls(camera, document.body);
+      
+      instructions.addEventListener('click', () => {
+        controls.lock();
+      });
+      controls.addEventListener('lock', () => {
+        instructions.style.display = 'none';
+        isGameActive = true;
+      });
+      controls.addEventListener('unlock', () => {
+        instructions.style.display = 'flex';
+        isGameActive = false;
+      });
 
-    // Posición inicial del jugador (al fondo del pasillo mirando hacia adelante)
-    controls.getObject().position.set(0, 1.7, 18);
+      scene.add(controls.getObject());
 
-    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-    const onKeyDown = (e) => {
-      switch (e.code) {
-        case 'KeyW': moveForward = true; break;
-        case 'KeyA': moveLeft = true; break;
-        case 'KeyS': moveBackward = true; break;
-        case 'KeyD': moveRight = true; break;
+      let keyW = false, keyS = false, keyA = false, keyD = false;
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyW') keyW = true;
+        if (e.code === 'KeyS') keyS = true;
+        if (e.code === 'KeyA') keyA = true;
+        if (e.code === 'KeyD') keyD = true;
+        updatePCMovement();
+      });
+      document.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyW') keyW = false;
+        if (e.code === 'KeyS') keyS = false;
+        if (e.code === 'KeyA') keyA = false;
+        if (e.code === 'KeyD') keyD = false;
+        updatePCMovement();
+      });
+
+      function updatePCMovement() {
+        moveForward = (keyW ? 1 : 0) - (keyS ? 1 : 0);
+        moveSide = (keyD ? 1 : 0) - (keyA ? 1 : 0);
       }
-    };
-    const onKeyUp = (e) => {
-      switch (e.code) {
-        case 'KeyW': moveForward = false; break;
-        case 'KeyA': moveLeft = false; break;
-        case 'KeyS': moveBackward = false; break;
-        case 'KeyD': moveRight = false; break;
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
+    } else {
+      // --- CONTROLES MÓVIL (Touch + Joystick) ---
+      instructions.addEventListener('click', () => {
+        instructions.style.display = 'none';
+        isGameActive = true;
+      });
 
-    // --- 3. ARQUITECTURA DE LA SALA RECTANGULAR ---
-    // Dimensiones del pasillo: Ancho (X) = 12m, Alto (Y) = 5m, Largo (Z) = 44m
+      // Crear Joystick con NippleJS
+      const manager = nipplejs.create({
+        zone: document.getElementById('joystick-zone'),
+        mode: 'static',
+        position: { left: '60px', bottom: '60px' },
+        color: 'white',
+        size: 90
+      });
+
+      manager.on('move', (evt, data) => {
+        if (data.vector) {
+          moveForward = data.vector.y;
+          moveSide = data.vector.x;
+        }
+      });
+
+      manager.on('end', () => {
+        moveForward = 0;
+        moveSide = 0;
+      });
+
+      // Control de rotación con la pantalla (Touch Drag)
+      let touchStartX = 0, touchStartY = 0;
+      let lon = -90, lat = 0; // Ángulos iniciales
+
+      window.addEventListener('touchstart', (e) => {
+        // Evitar rotar si se toca el joystick o la tarjeta de info
+        if (e.touches[0].clientX < 150 && e.touches[0].clientY > window.innerHeight - 180) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!isGameActive) return;
+        if (e.touches[0].clientX < 150 && e.touches[0].clientY > window.innerHeight - 180) return;
+
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+
+        const deltaX = touchX - touchStartX;
+        const deltaY = touchY - touchStartY;
+
+        lon += deltaX * 0.25;
+        lat -= deltaY * 0.25;
+        lat = Math.max(-85, Math.min(85, lat)); // Limitar rotación vertical
+
+        touchStartX = touchX;
+        touchStartY = touchY;
+
+        // Calcular dirección de visión de la cámara
+        const phi = THREE.MathUtils.degToRad(90 - lat);
+        const theta = THREE.MathUtils.degToRad(lon);
+
+        const target = new THREE.Vector3();
+        target.x = camera.position.x + Math.sin(phi) * Math.cos(theta);
+        target.y = camera.position.y + Math.cos(phi);
+        target.z = camera.position.z + Math.sin(phi) * Math.sin(theta);
+
+        camera.lookAt(target);
+      });
+    }
+
+    // --- 3. ARQUITECTURA DE LA SALA ---
     const roomWidth = 12;
-    const roomHeight = 55;
     const roomLength = 44;
 
-    // Suelo de madera/mármol oscuro
-    const floorGeo = new THREE.PlaneGeometry(roomWidth, roomLength);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1d, roughness: 0.3, metalness: 0.2 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(roomWidth, roomLength),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a1d, roughness: 0.3, metalness: 0.2 })
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Techo
-    const ceilingGeo = new THREE.PlaneGeometry(roomWidth, roomLength);
-    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x0f0f12 });
-    const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(roomWidth, roomLength),
+      new THREE.MeshStandardMaterial({ color: 0x0f0f12 })
+    );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = 5;
     scene.add(ceiling);
 
-    // Paredes
     function createWall(w, h, d, x, y, z) {
-      const geo = new THREE.BoxGeometry(w, h, d);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x252528, roughness: 0.8 });
-      const wall = new THREE.Mesh(geo, mat);
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: 0x252528, roughness: 0.8 })
+      );
       wall.position.set(x, y, z);
-      wall.receiveShadow = true;
-      wall.castShadow = true;
       scene.add(wall);
     }
 
-    createWall(roomWidth, 5, 0.2, 0, 2.5, -roomLength / 2); // Pared Fondo
-    createWall(roomWidth, 5, 0.2, 0, 2.5, roomLength / 2);  // Pared Entrada
-    createWall(0.2, 5, roomLength, -roomWidth / 2, 2.5, 0); // Pared Izquierda
-    createWall(0.2, 5, roomLength, roomWidth / 2, 2.5, 0);  // Pared Derecha
+    createWall(roomWidth, 5, 0.2, 0, 2.5, -roomLength / 2);
+    createWall(roomWidth, 5, 0.2, 0, 2.5, roomLength / 2);
+    createWall(0.2, 5, roomLength, -roomWidth / 2, 2.5, 0);
+    createWall(0.2, 5, roomLength, roomWidth / 2, 2.5, 0);
 
-    // --- 4. ILUMINACIÓN GENERAL DE LA SALA ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
-    scene.add(ambientLight);
+    // --- 4. ILUMINACIÓN ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 
-    // Luces de techo a lo largo del pasillo
     for (let z = -15; z <= 15; z += 10) {
-      const ceilingLight = new THREE.PointLight(0xfff5e6, 0.4, 15);
-      ceilingLight.position.set(0, 4.5, z);
-      scene.add(ceilingLight);
+      const light = new THREE.PointLight(0xfff5e6, 0.4, 15);
+      light.position.set(0, 4.5, z);
+      scene.add(light);
     }
 
-    // --- 5. BASE DE DATOS DE LAS 12 OBRAS DE ARTE ---
+    // --- 5. OBRAS DE ARTE ---
     const paintingsData = [
-      // PARED IZQUIERDA (x = -5.8, mirando a la derecha: rotY = Math.PI / 2)
-      {
-        title: "La Noche Estrellada", artist: "Vincent van Gogh (1889)",
-        desc: "Vista desde la ventana de su asilo en Saint-Rémy-de-Provence. Expresa turbulencia emocional a través de trazos de cielo arremolinados.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
-        pos: { x: -5.8, y: 2.3, z: -15 }, rotY: Math.PI / 2, size: [2.5, 1.8]
-      },
-      {
-        title: "La Mona Lisa", artist: "Leonardo da Vinci (1503)",
-        desc: "Retrato célebre por la expresión enigmática de la modelo y el innovador dominio de la técnica del sfumato.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
-        pos: { x: -5.8, y: 2.3, z: -9 }, rotY: Math.PI / 2, size: [1.6, 2.3]
-      },
-      {
-        title: "El Grito", artist: "Edvard Munch (1893)",
-        desc: "Obra emblemática del expresionismo que simboliza la angustia y desesperación existencial del ser humano moderno.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg",
-        pos: { x: -5.8, y: 2.3, z: -3 }, rotY: Math.PI / 2, size: [1.7, 2.2]
-      },
-      {
-        title: "La Persistencia de la Memoria", artist: "Salvador Dalí (1931)",
-        desc: "Obra maestra del surrealismo, famosa por sus relojes blandos derritiéndose en un paisaje desértico.",
-        image: "https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg",
-        pos: { x: -5.8, y: 2.3, z: 3 }, rotY: Math.PI / 2, size: [2.3, 1.7]
-      },
-      {
-        title: "La Gran Ola de Kanagawa", artist: "Katsushika Hokusai (1831)",
-        desc: "Famosa xilografía japonesa que muestra una impresionante ola amenazando embarcaciones frente al Monte Fuji.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg",
-        pos: { x: -5.8, y: 2.3, z: 9 }, rotY: Math.PI / 2, size: [2.4, 1.7]
-      },
-      {
-        title: "Impresión, Sol Naciente", artist: "Claude Monet (1872)",
-        desc: "La obra que dio nombre al movimiento Impresionista, capturando el puerto de El Havre al amanecer.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Soleil_levant.jpg/1280px-Monet_-_Impression%2C_Soleil_levant.jpg",
-        pos: { x: -5.8, y: 2.3, z: 15 }, rotY: Math.PI / 2, size: [2.4, 1.8]
-      },
-
-      // PARED DERECHA (x = 5.8, mirando a la izquierda: rotY = -Math.PI / 2)
-      {
-        title: "La Joven de la Perla", artist: "Johannes Vermeer (1665)",
-        desc: "Conocida como la 'Mona Lisa del Norte', destaca por la intensa mirada fija de la joven y el reflejo de la luz en el pendiente.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg",
-        pos: { x: 5.8, y: 2.3, z: -15 }, rotY: -Math.PI / 2, size: [1.7, 2.2]
-      },
-      {
-        title: "El Nacimiento de Venus", artist: "Sandro Botticelli (1485)",
-        desc: "Representa a la diosa Venus emergiendo del mar sobre una concha, símbolo máximo del Renacimiento italiano.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1280px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg",
-        pos: { x: 5.8, y: 2.3, z: -9 }, rotY: -Math.PI / 2, size: [2.6, 1.7]
-      },
-      {
-        title: "Las Meninas", artist: "Diego Velázquez (1656)",
-        desc: "Compleja composición barroca que juega con la perspectiva, la ilusión y la relación entre el espectador y los personajes.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Las_Meninas_01.jpg/800px-Las_Meninas_01.jpg",
-        pos: { x: 5.8, y: 2.3, z: -3 }, rotY: -Math.PI / 2, size: [2.0, 2.3]
-      },
-      {
-        title: "La Ronda de Noche", artist: "Rembrandt (1642)",
-        desc: "Famosa por su colosal tamaño y el uso dramático del claroscuro para resaltar el movimiento de la guardia civil.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg/1280px-The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg",
-        pos: { x: 5.8, y: 2.3, z: 3 }, rotY: -Math.PI / 2, size: [2.4, 2.0]
-      },
-      {
-        title: "La Creación de Adán", artist: "Miguel Ángel (1512)",
-        desc: "Fresco de la bóveda de la Capilla Sixtina que ilustra el episodio bíblico del origen de la humanidad.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/1280px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
-        pos: { x: 5.8, y: 2.3, z: 9 }, rotY: -Math.PI / 2, size: [2.6, 1.4]
-      },
-      {
-        title: "El Beso", artist: "Gustav Klimt (1908)",
-        desc: "Obra cumbre del periodo dorado de Klimt, decorada con pan de oro y formas geométricas inspiradas en mosaicos bizantinos.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/800px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg",
-        pos: { x: 5.8, y: 2.3, z: 15 }, rotY: -Math.PI / 2, size: [1.8, 2.2]
-      }
+      { title: "La Noche Estrellada", artist: "Vincent van Gogh (1889)", desc: "Vista desde la ventana de su asilo en Saint-Rémy-de-Provence.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg", pos: { x: -5.8, y: 2.3, z: -15 }, rotY: Math.PI / 2, size: [2.5, 1.8] },
+      { title: "La Mona Lisa", artist: "Leonardo da Vinci (1503)", desc: "Retrato célebre por la expresión enigmática y el sfumato.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg", pos: { x: -5.8, y: 2.3, z: -9 }, rotY: Math.PI / 2, size: [1.6, 2.3] },
+      { title: "El Grito", artist: "Edvard Munch (1893)", desc: "Obra emblemática del expresionismo que simboliza la angustia.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg", pos: { x: -5.8, y: 2.3, z: -3 }, rotY: Math.PI / 2, size: [1.7, 2.2] },
+      { title: "La Persistencia de la Memoria", artist: "Salvador Dalí (1931)", desc: "Famosa por sus relojes blandos derritiéndose.", image: "https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg", pos: { x: -5.8, y: 2.3, z: 3 }, rotY: Math.PI / 2, size: [2.3, 1.7] },
+      { title: "La Gran Ola de Kanagawa", artist: "Katsushika Hokusai (1831)", desc: "Famosa xilografía japonesa que muestra una ola amenazando embarcaciones.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg", pos: { x: -5.8, y: 2.3, z: 9 }, rotY: Math.PI / 2, size: [2.4, 1.7] },
+      { title: "Impresión, Sol Naciente", artist: "Claude Monet (1872)", desc: "Obra que dio nombre al movimiento Impresionista.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Soleil_levant.jpg/1280px-Monet_-_Impression%2C_Soleil_levant.jpg", pos: { x: -5.8, y: 2.3, z: 15 }, rotY: Math.PI / 2, size: [2.4, 1.8] },
+      { title: "La Joven de la Perla", artist: "Johannes Vermeer (1665)", desc: "Destaca por la mirada de la joven y el brillo del pendiente.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg", pos: { x: 5.8, y: 2.3, z: -15 }, rotY: -Math.PI / 2, size: [1.7, 2.2] },
+      { title: "El Nacimiento de Venus", artist: "Sandro Botticelli (1485)", desc: "Representa a Venus emergiendo del mar sobre una concha.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1280px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg", pos: { x: 5.8, y: 2.3, z: -9 }, rotY: -Math.PI / 2, size: [2.6, 1.7] },
+      { title: "Las Meninas", artist: "Diego Velázquez (1656)", desc: "Compleja composición barroca que juega con la perspectiva.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Las_Meninas_01.jpg/800px-Las_Meninas_01.jpg", pos: { x: 5.8, y: 2.3, z: -3 }, rotY: -Math.PI / 2, size: [2.0, 2.3] },
+      { title: "La Ronda de Noche", artist: "Rembrandt (1642)", desc: "Uso dramático del claroscuro para resaltar el movimiento.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg/1280px-The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg", pos: { x: 5.8, y: 2.3, z: 3 }, rotY: -Math.PI / 2, size: [2.4, 2.0] },
+      { title: "La Creación de Adán", artist: "Miguel Ángel (1512)", desc: "Fresco de la Capilla Sixtina que ilustra el origen de la humanidad.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/1280px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg", pos: { x: 5.8, y: 2.3, z: 9 }, rotY: -Math.PI / 2, size: [2.6, 1.4] },
+      { title: "El Beso", artist: "Gustav Klimt (1908)", desc: "Decorada con pan de oro y formas geométricas inspiradas en mosaicos.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/800px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg", pos: { x: 5.8, y: 2.3, z: 15 }, rotY: -Math.PI / 2, size: [1.8, 2.2] }
     ];
 
-    // --- 6. RENDERIZAR CUADROS Y LUCES INDIVIDUALES ---
     const textureLoader = new THREE.TextureLoader();
     const paintingsList = [];
 
@@ -314,22 +348,19 @@
       group.position.set(data.pos.x, data.pos.y, data.pos.z);
       group.rotation.y = data.rotY;
 
-      // Marco de Madera
-      const frameGeo = new THREE.BoxGeometry(data.size[0] + 0.2, data.size[1] + 0.2, 0.08);
-      const frameMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.castShadow = true;
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(data.size[0] + 0.2, data.size[1] + 0.2, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 })
+      );
       group.add(frame);
 
-      // Lienzo / Imagen
-      const canvasGeo = new THREE.PlaneGeometry(data.size[0], data.size[1]);
-      const texture = textureLoader.load(data.image);
-      const canvasMat = new THREE.MeshBasicMaterial({ map: texture });
-      const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
+      const canvasMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.size[0], data.size[1]),
+        new THREE.MeshBasicMaterial({ map: textureLoader.load(data.image) })
+      );
       canvasMesh.position.z = 0.05;
       group.add(canvasMesh);
 
-      // Foco SpotLight dirigido al cuadro
       const spotLight = new THREE.SpotLight(0xfffaee, 1.8, 8, Math.PI / 4, 0.4);
       spotLight.position.set(0, 1.2, 1.8);
       spotLight.target = canvasMesh;
@@ -337,27 +368,24 @@
 
       scene.add(group);
 
-      // Registrar datos de proximidad
       paintingsList.push({
         position: new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z),
         info: data
       });
     });
 
-    // --- 7. DETECCIÓN DE CERCANÍA PARA MOSTRAR INFORMACIÓN ---
+    // --- 6. DETECCIÓN DE PROXIMIDAD ---
     const infoCard = document.getElementById('info-card');
     const titleEl = document.getElementById('artwork-title');
     const artistEl = document.getElementById('artist-name');
     const descEl = document.getElementById('artwork-desc');
 
     function checkProximity() {
-      const playerPos = controls.getObject().position;
+      const playerPos = camera.position;
       let activePainting = null;
-      const triggerDistance = 4.0; // Distancia máxima para activar la tarjeta
 
       paintingsList.forEach(item => {
-        const dist = playerPos.distanceTo(item.position);
-        if (dist < triggerDistance) {
+        if (playerPos.distanceTo(item.position) < 4.0) {
           activePainting = item.info;
         }
       });
@@ -372,30 +400,35 @@
       }
     }
 
-    // --- 8. BUCLE DE ANIMACIÓN Y FÍSICAS SIMPLE ---
+    // --- 7. BUCLE DE ANIMACIÓN ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
 
       const delta = clock.getDelta();
-      const moveSpeed = 5.0 * delta;
+      const speed = 4.5 * delta;
 
-      if (controls.isLocked) {
-        if (moveForward) controls.moveForward(moveSpeed);
-        if (moveBackward) controls.moveForward(-moveSpeed);
-        if (moveLeft) controls.moveRight(-moveSpeed);
-        if (moveRight) controls.moveRight(moveSpeed);
+      if (isGameActive) {
+        // Mover según la orientación de la cámara
+        if (moveForward !== 0 || moveSide !== 0) {
+          const dir = new THREE.Vector3();
+          camera.getWorldDirection(dir);
+          dir.y = 0; // Prevenir volar o hundirse
+          dir.normalize();
 
-        // Bloqueo de altura y límites de las paredes para no atravesarlas
-        const pos = controls.getObject().position;
-        pos.y = 1.7; // Altura fija del espectador
+          const sideDir = new THREE.Vector3().crossVectors(camera.up, dir).negate();
 
-        // Límites del pasillo
-        if (pos.x < -4.8) pos.x = -4.8;
-        if (pos.x > 4.8) pos.x = 4.8;
-        if (pos.z < -20) pos.z = -20;
-        if (pos.z > 20) pos.z = 20;
+          camera.position.addScaledVector(dir, moveForward * speed);
+          camera.position.addScaledVector(sideDir, moveSide * speed);
+        }
+
+        // Colisiones básicas
+        camera.position.y = 1.7;
+        if (camera.position.x < -4.8) camera.position.x = -4.8;
+        if (camera.position.x > 4.8) camera.position.x = 4.8;
+        if (camera.position.z < -20) camera.position.z = -20;
+        if (camera.position.z > 20) camera.position.z = 20;
 
         checkProximity();
       }
@@ -405,7 +438,6 @@
 
     animate();
 
-    // Redimensionar automáticamente al cambiar tamaño de la pantalla
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
