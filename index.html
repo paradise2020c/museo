@@ -2,15 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <!-- Evita el bloqueo de hotlinking al abrir el archivo HTML localmente -->
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Gran Galería Virtual 3D - Multiplataforma</title>
+  <title>Galería de la Plaza de la Aduana 3D</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', Arial, sans-serif;
       user-select: none;
       touch-action: none;
+      background-color: #000;
     }
 
     #canvas-container {
@@ -22,102 +25,211 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 8px;
-      height: 8px;
-      margin-top: -4px;
-      margin-left: -4px;
+      width: 10px;
+      height: 10px;
+      margin-top: -5px;
+      margin-left: -5px;
       border-radius: 50%;
       background-color: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(0, 0, 0, 0.6);
       pointer-events: none;
       z-index: 10;
+      transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.2s ease;
     }
 
-    /* Pantalla de inicio */
+    #crosshair.active {
+      background-color: #f39c12;
+      transform: scale(1.5);
+      border-color: #ffffff;
+    }
+
+    #interaction-prompt {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #f39c12;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      display: none;
+      pointer-events: none;
+      z-index: 15;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    /* PANTALLA DE INICIO - FACHADA REAL ADUANA BARRANQUILLA */
     #instructions {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(10, 10, 12, 0.9);
+      background-color: #0c0d10;
       color: white;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
       z-index: 30;
-      cursor: pointer;
-      text-align: center;
-      padding: 20px;
+      padding: 25px;
       box-sizing: border-box;
+      text-align: center;
+      overflow: hidden;
     }
 
-    #instructions h1 {
-      margin-bottom: 10px;
-      font-size: 2.2rem;
+    #instructions::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edificio_de_La_Aduana%2C_Barranquilla.jpg/1280px-Edificio_de_La_Aduana%2C_Barranquilla.jpg');
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      opacity: 0.55;
+      z-index: 1;
     }
 
-    #instructions p {
+    #instructions .top-nav,
+    #instructions .hero-content,
+    #instructions .footer-brand {
+      position: relative;
+      z-index: 2;
+    }
+
+    .top-nav {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .top-btn {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .main-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 0 8px 0;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.9);
+    }
+
+    .sub-title {
       font-size: 1.1rem;
-      color: #ccc;
-      max-width: 500px;
-      line-height: 1.5;
+      font-weight: 600;
+      letter-spacing: 3px;
+      color: #e0e0e0;
+      margin: 0 0 35px 0;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
     }
 
-    /* Tarjeta informativa del cuadro */
+    .visit-btn {
+      background: #ffffff;
+      color: #111111;
+      border: none;
+      padding: 14px 50px;
+      font-size: 1.25rem;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.7);
+    }
+
+    .visit-btn:hover {
+      background: #f39c12;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    .footer-brand {
+      font-size: 0.85rem;
+      color: #ccc;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    }
+
+    .footer-brand strong {
+      color: #fff;
+    }
+
+    /* TARJETA INFORMATIVA DE LA OBRA */
     #info-card {
       position: absolute;
-      bottom: 25px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 15, 20, 0.92);
+      background: rgba(15, 15, 20, 0.94);
       color: #fff;
-      padding: 18px 24px;
+      padding: 20px 24px;
       border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(243, 156, 18, 0.5);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-      max-width: 500px;
+      max-width: 550px;
       width: 85%;
       display: none;
-      z-index: 20;
+      z-index: 100;
       backdrop-filter: blur(12px);
       box-sizing: border-box;
+      text-align: center;
     }
 
-    #info-card h2 {
-      margin: 0 0 4px 0;
-      color: #f39c12;
-      font-size: 1.3rem;
-    }
+    #info-card h2 { margin: 0 0 4px 0; color: #f39c12; font-size: 1.4rem; }
+    #info-card h4 { margin: 0 0 10px 0; color: #aaa; font-weight: 400; font-style: italic; font-size: 0.95rem; }
+    #info-card p { margin: 0 0 16px 0; line-height: 1.45; font-size: 0.9rem; color: #ddd; }
 
-    #info-card h4 {
-      margin: 0 0 8px 0;
-      color: #aaa;
-      font-weight: 400;
-      font-style: italic;
+    #close-zoom-btn {
+      background: #f39c12;
+      color: #111;
+      border: none;
+      padding: 10px 22px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
       font-size: 0.9rem;
+      transition: background 0.2s ease, transform 0.1s ease;
     }
 
-    #info-card p {
-      margin: 0;
-      line-height: 1.4;
-      font-size: 0.85rem;
-      color: #ddd;
+    #close-zoom-btn:hover {
+      background: #e08e0b;
+      transform: scale(1.03);
     }
 
-    /* Contenedor del Joystick para móvil */
-    #joystick-zone {
-      position: absolute;
-      bottom: 40px;
-      left: 40px;
-      width: 120px;
-      height: 120px;
-      z-index: 25;
+    /* CONTROLES MÓVIL */
+    #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; z-index: 25; }
+    #jump-btn {
+      position: absolute; bottom: 40px; right: 40px; width: 75px; height: 75px;
+      border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5);
+      color: white; font-weight: bold; font-size: 0.85rem; display: none; align-items: center; justify-content: center; z-index: 25;
     }
   </style>
 
-  <!-- Three.js y Librería de Joystick Táctil NippleJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
@@ -125,41 +237,58 @@
 <body>
 
   <div id="crosshair"></div>
+  <div id="interaction-prompt">Haz clic en la obra para acercarte</div>
 
   <div id="instructions">
-    <h1>Gran Galería Virtual</h1>
-    <p id="controls-hint">Toca aquí para iniciar el recorrido.</p>
+    <div class="top-nav">
+      <button class="top-btn">ES</button>
+      <button class="top-btn">⚙</button>
+    </div>
+
+    <div class="hero-content">
+      <h1 class="main-title">GALERÍA DE LA PLAZA DE LA ADUANA</h1>
+      <div class="sub-title">RECORRIDO VIRTUAL DESDE CASA</div>
+      <button id="start-btn" class="visit-btn">Visita</button>
+    </div>
+
+    <div class="footer-brand">
+      Conectados por <strong>Galería de la Aduana</strong>
+    </div>
   </div>
 
   <div id="info-card">
     <h2 id="artwork-title">Título de la Obra</h2>
     <h4 id="artist-name">Artista</h4>
     <p id="artwork-desc">Descripción de la obra...</p>
+    <button id="close-zoom-btn">Volver a caminar</button>
   </div>
 
-  <!-- Zona táctil para el Joystick -->
   <div id="joystick-zone"></div>
+  <div id="jump-btn">SALTAR</div>
 
   <div id="canvas-container"></div>
 
   <script>
-    // Detección de dispositivo móvil
+    const mouseSensitivity = 0.30;
+    const touchSensitivity = 0.08;
+
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    const hintEl = document.getElementById('controls-hint');
-    if (isMobile) {
-      hintEl.innerHTML = "Toca para entrar.<br><br><b>Controles táctiles:</b><br>• Joystick izquierdo: Desplazarse<br>• Deslizar pantalla: Mirar alrededor";
-    } else {
-      hintEl.innerHTML = "Haz clic para entrar.<br><br><b>Controles PC:</b><br>• Teclas W, A, S, D: Caminar<br>• Mouse: Mirar alrededor";
-    }
+    const jumpBtn = document.getElementById('jump-btn');
+    const infoCard = document.getElementById('info-card');
+    const closeZoomBtn = document.getElementById('close-zoom-btn');
+    const crosshair = document.getElementById('crosshair');
+    const promptEl = document.getElementById('interaction-prompt');
+    const startBtn = document.getElementById('start-btn');
+    const instructions = document.getElementById('instructions');
 
-    // --- 1. ESCENA Y CÁMARA ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x18171c); // Fondo ligeramente más cálido
-    scene.fog = new THREE.FogExp2(0x18171c, 0.015);
+    scene.background = new THREE.Color(0x18181c);
+    scene.fog = new THREE.FogExp2(0x18181c, 0.012);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 1.7, 18);
+    const eyeHeight = 1.7;
+    camera.position.set(0, eyeHeight, -15);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -167,37 +296,67 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    // --- 2. CONTROLES Y SISTEMA DE MOVIMIENTO ---
-    const instructions = document.getElementById('instructions');
+    let velocityY = 0;
+    const gravity = 16.0;
+    const jumpForce = 5.2;
+    let canJump = true;
+
+    let isZoomed = false;
+    let savedCamPos = new THREE.Vector3();
+    let targetCamPos = new THREE.Vector3();
+    let targetLookAt = new THREE.Vector3();
+    let currentLookAt = new THREE.Vector3();
+    let controls;
+
+    let targetLon = 0, targetLat = 0;
+    let currentLon = 0, currentLat = 0;
+
+    function performJump() {
+      if (canJump && !isZoomed) {
+        velocityY = jumpForce;
+        canJump = false;
+      }
+    }
+
     let isGameActive = false;
     let moveForward = 0, moveSide = 0;
 
     if (!isMobile) {
-      // --- CONTROLES PC ---
-      const controls = new THREE.PointerLockControls(camera, document.body);
-      
-      instructions.addEventListener('click', () => {
-        controls.lock();
+      controls = new THREE.PointerLockControls(camera, document.body);
+      controls.pointerSpeed = mouseSensitivity;
+
+      startBtn.addEventListener('click', () => { 
+        if (!isZoomed) controls.lock(); 
       });
+      
       controls.addEventListener('lock', () => {
         instructions.style.display = 'none';
         isGameActive = true;
       });
+      
       controls.addEventListener('unlock', () => {
-        instructions.style.display = 'flex';
-        isGameActive = false;
+        if (!isZoomed) {
+          instructions.style.display = 'flex';
+          isGameActive = false;
+        }
       });
 
       scene.add(controls.getObject());
 
       let keyW = false, keyS = false, keyA = false, keyD = false;
       document.addEventListener('keydown', (e) => {
+        if (isZoomed) {
+          if (e.code === 'Escape') exitZoom();
+          return;
+        }
         if (e.code === 'KeyW') keyW = true;
         if (e.code === 'KeyS') keyS = true;
         if (e.code === 'KeyA') keyA = true;
         if (e.code === 'KeyD') keyD = true;
+        if (e.code === 'Space') performJump();
         updatePCMovement();
       });
+
       document.addEventListener('keyup', (e) => {
         if (e.code === 'KeyW') keyW = false;
         if (e.code === 'KeyS') keyS = false;
@@ -211,10 +370,15 @@
         moveSide = (keyD ? 1 : 0) - (keyA ? 1 : 0);
       }
     } else {
-      // --- CONTROLES MÓVIL ---
-      instructions.addEventListener('click', () => {
+      startBtn.addEventListener('click', () => {
         instructions.style.display = 'none';
+        jumpBtn.style.display = 'flex';
         isGameActive = true;
+      });
+
+      jumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        performJump();
       });
 
       const manager = nipplejs.create({
@@ -226,7 +390,7 @@
       });
 
       manager.on('move', (evt, data) => {
-        if (data.vector) {
+        if (data.vector && !isZoomed) {
           moveForward = data.vector.y;
           moveSide = data.vector.x;
         }
@@ -238,50 +402,40 @@
       });
 
       let touchStartX = 0, touchStartY = 0;
-      let lon = -90, lat = 0;
 
       window.addEventListener('touchstart', (e) => {
+        if (isZoomed) return;
         if (e.touches[0].clientX < 150 && e.touches[0].clientY > window.innerHeight - 180) return;
+        if (e.touches[0].clientX > window.innerWidth - 130 && e.touches[0].clientY > window.innerHeight - 130) return;
+
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
       });
 
       window.addEventListener('touchmove', (e) => {
-        if (!isGameActive) return;
+        if (!isGameActive || isZoomed) return;
         if (e.touches[0].clientX < 150 && e.touches[0].clientY > window.innerHeight - 180) return;
+        if (e.touches[0].clientX > window.innerWidth - 130 && e.touches[0].clientY > window.innerHeight - 130) return;
 
-        const touchX = e.touches[0].clientX;
-        const touchY = e.touches[0].clientY;
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
 
-        const deltaX = touchX - touchStartX;
-        const deltaY = touchY - touchStartY;
+        targetLon += deltaX * touchSensitivity;
+        targetLat -= deltaY * touchSensitivity;
+        targetLat = Math.max(-85, Math.min(85, targetLat));
 
-        lon += deltaX * 0.25;
-        lat -= deltaY * 0.25;
-        lat = Math.max(-85, Math.min(85, lat));
-
-        touchStartX = touchX;
-        touchStartY = touchY;
-
-        const phi = THREE.MathUtils.degToRad(90 - lat);
-        const theta = THREE.MathUtils.degToRad(lon);
-
-        const target = new THREE.Vector3();
-        target.x = camera.position.x + Math.sin(phi) * Math.cos(theta);
-        target.y = camera.position.y + Math.cos(phi);
-        target.z = camera.position.z + Math.sin(phi) * Math.sin(theta);
-
-        camera.lookAt(target);
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
       });
     }
 
-    // --- 3. ARQUITECTURA DE LA SALA ---
-    const roomWidth = 12;
-    const roomLength = 44;
+    // --- ARQUITECTURA SALA 3D ---
+    const roomWidth = 10;
+    const roomLength = 36;
 
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(roomWidth, roomLength),
-      new THREE.MeshStandardMaterial({ color: 0x222225, roughness: 0.3, metalness: 0.1 })
+      new THREE.MeshStandardMaterial({ color: 0x2a2b30, roughness: 0.4, metalness: 0.1 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
@@ -289,202 +443,401 @@
 
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(roomWidth, roomLength),
-      new THREE.MeshStandardMaterial({ color: 0x1f1f24, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({ color: 0xb0b0b8, roughness: 0.8 })
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = 5;
     scene.add(ceiling);
 
-    function createWall(w, h, d, x, y, z) {
-      const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color: 0x2b2b30, roughness: 0.8 })
-      );
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x909095, roughness: 0.7 });
+
+    function createWallBlock(w, h, d, x, y, z) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMaterial);
       wall.position.set(x, y, z);
       scene.add(wall);
     }
 
-    createWall(roomWidth, 5, 0.2, 0, 2.5, -roomLength / 2);
-    createWall(roomWidth, 5, 0.2, 0, 2.5, roomLength / 2);
-    createWall(0.2, 5, roomLength, -roomWidth / 2, 2.5, 0);
-    createWall(0.2, 5, roomLength, roomWidth / 2, 2.5, 0);
+    createWallBlock(roomWidth, 5, 0.2, 0, 2.5, -roomLength / 2);
+    createWallBlock(roomWidth, 5, 0.2, 0, 2.5, roomLength / 2);
+    createWallBlock(0.2, 5, roomLength, -roomWidth / 2, 2.5, 0);
+    createWallBlock(0.2, 5, roomLength, roomWidth / 2, 2.5, 0);
 
-    // --- 4. SISTEMA DE LÁMPARAS EN EL TECHO E ILUMINACIÓN ---
-    // Luz ambiental para asegurar visibilidad general en la sala
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    function createDividerWallWithDoor(zPos) {
+      createWallBlock(3.5, 5, 0.2, -3.25, 2.5, zPos);
+      createWallBlock(3.5, 5, 0.2, 3.25, 2.5, zPos);
+      createWallBlock(3.0, 1.2, 0.2, 0, 4.4, zPos);
+    }
 
-    // Rieles metálicos en el techo (dos líneas a lo largo del pasillo)
-    const trackGeo = new THREE.BoxGeometry(0.08, 0.08, roomLength - 4);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
-    
-    const trackLeft = new THREE.Mesh(trackGeo, trackMat);
-    trackLeft.position.set(-3, 4.95, 0);
-    scene.add(trackLeft);
+    createDividerWallWithDoor(-6);
+    createDividerWallWithDoor(6);
 
-    const trackRight = new THREE.Mesh(trackGeo, trackMat);
-    trackRight.position.set(3, 4.95, 0);
-    scene.add(trackRight);
+    function createMuseumBench(x, y, z) {
+      const benchGroup = new THREE.Group();
+      const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.1, 2.6),
+        new THREE.MeshStandardMaterial({ color: 0x2e241e, roughness: 0.5 })
+      );
+      seat.position.y = 0.5;
+      seat.castShadow = true;
+      benchGroup.add(seat);
 
-    // Función para crear cada lámpara/foco físico con iluminación
-    function createCeilingSpotlight(x, y, z, targetX) {
+      const legGeo = new THREE.BoxGeometry(1.1, 0.45, 0.1);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
+
+      const leg1 = new THREE.Mesh(legGeo, legMat);
+      leg1.position.set(0, 0.225, -1.0);
+      benchGroup.add(leg1);
+
+      const leg2 = new THREE.Mesh(legGeo, legMat);
+      leg2.position.set(0, 0.225, 1.0);
+      benchGroup.add(leg2);
+
+      benchGroup.position.set(x, y, z);
+      scene.add(benchGroup);
+    }
+
+    createMuseumBench(0, 0, -11.5);
+    createMuseumBench(0, 0, 11.5);
+
+    // --- CONSTRUCCIÓN DE POSTES Y SEPARADORES ---
+    function createPost(material) {
+      const postGroup = new THREE.Group();
+
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.03, 16), material);
+      base.position.y = 0.015;
+      base.castShadow = true;
+      postGroup.add(base);
+
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.85, 16), material);
+      pole.position.y = 0.44;
+      pole.castShadow = true;
+      postGroup.add(pole);
+
+      const topBall = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), material);
+      topBall.position.y = 0.88;
+      topBall.castShadow = true;
+      postGroup.add(topBall);
+
+      return postGroup;
+    }
+
+    function createStanchionBarrier(paintingX, paintingZ, paintingWidth) {
+      const barrierGroup = new THREE.Group();
+      const postMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
+      const ropeMat = new THREE.MeshStandardMaterial({ color: 0x8a0c0c, roughness: 0.6 });
+
+      const isLeft = paintingX < 0;
+      const barrierX = isLeft ? -3.7 : 3.7;
+      const halfSpan = (paintingWidth / 2) + 0.35;
+
+      const z1 = paintingZ - halfSpan;
+      const z2 = paintingZ + halfSpan;
+
+      const post1 = createPost(postMat);
+      post1.position.set(barrierX, 0, z1);
+      barrierGroup.add(post1);
+
+      const post2 = createPost(postMat);
+      post2.position.set(barrierX, 0, z2);
+      barrierGroup.add(post2);
+
+      const p1 = new THREE.Vector3(barrierX, 0.84, z1);
+      const p2 = new THREE.Vector3(barrierX, 0.68, paintingZ);
+      const p3 = new THREE.Vector3(barrierX, 0.84, z2);
+
+      const curve = new THREE.CatmullRomCurve3([p1, p2, p3]);
+      const ropeGeo = new THREE.TubeGeometry(curve, 16, 0.016, 8, false);
+      const rope = new THREE.Mesh(ropeGeo, ropeMat);
+      rope.castShadow = true;
+      barrierGroup.add(rope);
+
+      scene.add(barrierGroup);
+    }
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 0.25);
+    hemiLight.position.set(0, 10, 0);
+    scene.add(hemiLight);
+
+    function createCeilingLampMesh(x, y, z) {
       const lampGroup = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }));
+      base.position.y = 0;
+      lampGroup.add(base);
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.7, roughness: 0.3 }));
+      body.position.y = -0.11;
+      lampGroup.add(body);
+
+      const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 16), new THREE.MeshBasicMaterial({ color: 0xfff2e0 }));
+      bulb.position.y = -0.21;
+      lampGroup.add(bulb);
+
       lampGroup.position.set(x, y, z);
-
-      // Soporte/Cuerpo de la lámpara
-      const baseGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.25, 12);
-      const baseMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8 });
-      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-      lampGroup.add(baseMesh);
-
-      // Lente/Foco emisor (brilla visualmente)
-      const bulbGeo = new THREE.SphereGeometry(0.08, 12, 12);
-      const bulbMat = new THREE.MeshBasicMaterial({ color: 0xfff3e0 });
-      const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
-      bulbMesh.position.y = -0.1;
-      lampGroup.add(bulbMesh);
-
-      // Orientación sutil de la lámpara hacia las paredes
-      if (targetX < 0) lampGroup.rotation.z = -0.3;
-      if (targetX > 0) lampGroup.rotation.z = 0.3;
-
       scene.add(lampGroup);
-
-      // Fuente de luz puntual de la lámpara
-      const pointLight = new THREE.PointLight(0xfff3e0, 0.75, 12);
-      pointLight.position.set(x, y - 0.2, z);
-      scene.add(pointLight);
     }
 
-    // Generación consecutiva de lámparas a lo largo de ambos rieles del techo
-    const spacing = 3.5; // Distancia entre cada lámpara
-    for (let z = -18; z <= 18; z += spacing) {
-      // Lámparas lado izquierdo
-      createCeilingSpotlight(-3, 4.85, z, -5.8);
-      // Lámparas lado derecho
-      createCeilingSpotlight(3, 4.85, z, 5.8);
+    for (let z = -16; z <= 16; z += 4) {
+      createCeilingLampMesh(-2.2, 4.95, z);
+      const pLight1 = new THREE.PointLight(0xfff2e0, 0.95, 11);
+      pLight1.position.set(-2.2, 4.5, z);
+      scene.add(pLight1);
+
+      createCeilingLampMesh(2.2, 4.95, z);
+      const pLight2 = new THREE.PointLight(0xfff2e0, 0.95, 11);
+      pLight2.position.set(2.2, 4.5, z);
+      scene.add(pLight2);
     }
 
-    // --- 5. OBRAS DE ARTE ---
+    // --- OBRAS DE ARTE ---
     const paintingsData = [
-      { title: "La Noche Estrellada", artist: "Vincent van Gogh (1889)", desc: "Vista desde la ventana de su asilo en Saint-Rémy-de-Provence.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg", pos: { x: -5.8, y: 2.3, z: -15 }, rotY: Math.PI / 2, size: [2.5, 1.8] },
-      { title: "La Mona Lisa", artist: "Leonardo da Vinci (1503)", desc: "Retrato célebre por la expresión enigmática y el sfumato.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg", pos: { x: -5.8, y: 2.3, z: -9 }, rotY: Math.PI / 2, size: [1.6, 2.3] },
-      { title: "El Grito", artist: "Edvard Munch (1893)", desc: "Obra emblemática del expresionismo que simboliza la angustia.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg", pos: { x: -5.8, y: 2.3, z: -3 }, rotY: Math.PI / 2, size: [1.7, 2.2] },
-      { title: "La Persistencia de la Memoria", artist: "Salvador Dalí (1931)", desc: "Famosa por sus relojes blandos derritiéndose.", image: "https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg", pos: { x: -5.8, y: 2.3, z: 3 }, rotY: Math.PI / 2, size: [2.3, 1.7] },
-      { title: "La Gran Ola de Kanagawa", artist: "Katsushika Hokusai (1831)", desc: "Famosa xilografía japonesa que muestra una ola amenazando embarcaciones.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg", pos: { x: -5.8, y: 2.3, z: 9 }, rotY: Math.PI / 2, size: [2.4, 1.7] },
-      { title: "Impresión, Sol Naciente", artist: "Claude Monet (1872)", desc: "Obra que dio nombre al movimiento Impresionista.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Soleil_levant.jpg/1280px-Monet_-_Impression%2C_Soleil_levant.jpg", pos: { x: -5.8, y: 2.3, z: 15 }, rotY: Math.PI / 2, size: [2.4, 1.8] },
-      { title: "La Joven de la Perla", artist: "Johannes Vermeer (1665)", desc: "Destaca por la mirada de la joven y el brillo del pendiente.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg", pos: { x: 5.8, y: 2.3, z: -15 }, rotY: -Math.PI / 2, size: [1.7, 2.2] },
-      { title: "El Nacimiento de Venus", artist: "Sandro Botticelli (1485)", desc: "Representa a Venus emergiendo del mar sobre una concha.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1280px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg", pos: { x: 5.8, y: 2.3, z: -9 }, rotY: -Math.PI / 2, size: [2.6, 1.7] },
-      { title: "Las Meninas", artist: "Diego Velázquez (1656)", desc: "Compleja composición barroca que juega con la perspectiva.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Las_Meninas_01.jpg/800px-Las_Meninas_01.jpg", pos: { x: 5.8, y: 2.3, z: -3 }, rotY: -Math.PI / 2, size: [2.0, 2.3] },
-      { title: "La Ronda de Noche", artist: "Rembrandt (1642)", desc: "Uso dramático del claroscuro para resaltar el movimiento.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg/1280px-The_Night_Watch_-_De_Nachtwacht_%281642%29_Rembrandt_van_Rijn.jpg", pos: { x: 5.8, y: 2.3, z: 3 }, rotY: -Math.PI / 2, size: [2.4, 2.0] },
-      { title: "La Creación de Adán", artist: "Miguel Ángel (1512)", desc: "Fresco de la Capilla Sixtina que ilustra el origen de la humanidad.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg/1280px-Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg", pos: { x: 5.8, y: 2.3, z: 9 }, rotY: -Math.PI / 2, size: [2.6, 1.4] },
-      { title: "El Beso", artist: "Gustav Klimt (1908)", desc: "Decorada con pan de oro y formas geométricas inspiradas en mosaicos.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/800px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg", pos: { x: 5.8, y: 2.3, z: 15 }, rotY: -Math.PI / 2, size: [1.8, 2.2] }
+      { title: "La Noche Estrellada", artist: "Vincent van Gogh (1889)", desc: "Vista icónica desde la ventana de su asilo en Saint-Rémy.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg", pos: { x: -4.8, y: 2.3, z: -14 }, rotY: Math.PI / 2, size: [2.0, 1.5] },
+      { title: "El Dormitorio en Arlés", artist: "Vincent van Gogh (1888)", desc: "Representa el dormitorio del artista en la Casa Amarilla.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Vincent_van_Gogh_-_De_slaapkamer_-_Google_Art_Project.jpg/1280px-Vincent_van_Gogh_-_De_slaapkamer_-_Google_Art_Project.jpg", pos: { x: -4.8, y: 2.3, z: -9 }, rotY: Math.PI / 2, size: [2.0, 1.5] },
+      { title: "La Joven de la Perla", artist: "Johannes Vermeer (1665)", desc: "Famoso retrato conocido como la Mona Lisa del Norte.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg", pos: { x: 4.8, y: 2.3, z: -14 }, rotY: -Math.PI / 2, size: [1.5, 1.9] },
+      { title: "La Lechera", artist: "Johannes Vermeer (1658)", desc: "Escena costumbrista que resalta el tratamiento maestro de la luz.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg/800px-Johannes_Vermeer_-_Het_melkmeisje_-_Google_Art_Project.jpg", pos: { x: 4.8, y: 2.3, z: -9 }, rotY: -Math.PI / 2, size: [1.5, 1.9] },
+      { title: "La Mona Lisa", artist: "Leonardo da Vinci (1503)", desc: "Retrato célebre por la expresión enigmática y el sfumato.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg", pos: { x: -4.8, y: 2.3, z: -3 }, rotY: Math.PI / 2, size: [1.4, 1.9] },
+      { title: "La Dama del Armiño", artist: "Leonardo da Vinci (1489)", desc: "Retrato de Cecilia Gallerani sosteniendo un armiño.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Lady_with_an_Ermine_-_Leonardo_da_Vinci_-_Google_Art_Project.jpg/800px-Lady_with_an_Ermine_-_Leonardo_da_Vinci_-_Google_Art_Project.jpg", pos: { x: -4.8, y: 2.3, z: 3 }, rotY: Math.PI / 2, size: [1.4, 1.9] },
+      { title: "El Nacimiento de Venus", artist: "Sandro Botticelli (1485)", desc: "Representa a la diosa Venus emergiendo del mar.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1280px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg", pos: { x: 4.8, y: 2.3, z: -3 }, rotY: -Math.PI / 2, size: [2.2, 1.5] },
+      { title: "La Primavera", artist: "Sandro Botticelli (1482)", desc: "Alegoría mitológica elaborada para la familia Médici.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Botticelli-primavera.jpg/1280px-Botticelli-primavera.jpg", pos: { x: 4.8, y: 2.3, z: 3 }, rotY: -Math.PI / 2, size: [2.2, 1.5] },
+      { title: "La Gran Ola de Kanagawa", artist: "Katsushika Hokusai (1831)", desc: "Famosa xilografía del período Edo que muestra una gran ola.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg", pos: { x: -4.8, y: 2.3, z: 9 }, rotY: Math.PI / 2, size: [2.1, 1.5] },
+      { title: "Impresión, Sol Naciente", artist: "Claude Monet (1872)", desc: "Obra que dio nombre al movimiento Impresionista.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Soleil_levant.jpg/1280px-Monet_-_Impression%2C_Soleil_levant.jpg", pos: { x: -4.8, y: 2.3, z: 14 }, rotY: Math.PI / 2, size: [2.0, 1.5] },
+      { title: "El Grito", artist: "Edvard Munch (1893)", desc: "Obra icónica del expresionismo que simboliza la angustia.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73.5_cm%2C_National_Gallery_of_Norway.jpg", pos: { x: 4.8, y: 2.3, z: 9 }, rotY: -Math.PI / 2, size: [1.5, 1.9] },
+      { title: "Caminante sobre el mar de nubes", artist: "Caspar David Friedrich (1818)", desc: "Obra cumbre del Romanticismo alemán.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/800px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg", pos: { x: 4.8, y: 2.3, z: 14 }, rotY: -Math.PI / 2, size: [1.5, 1.9] }
     ];
 
+    const interactiveObjects = [];
     const textureLoader = new THREE.TextureLoader();
-    const paintingsList = [];
 
     paintingsData.forEach(data => {
       const group = new THREE.Group();
       group.position.set(data.pos.x, data.pos.y, data.pos.z);
       group.rotation.y = data.rotY;
 
-      // Marco
-      const frame = new THREE.Mesh(
-        new THREE.BoxGeometry(data.size[0] + 0.2, data.size[1] + 0.2, 0.08),
-        new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.6 })
-      );
+      const pWidth = data.size[0];
+      const pHeight = data.size[1];
+
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(pWidth + 0.1, pHeight + 0.1, 0.05), frameMat);
+      frame.castShadow = true;
       group.add(frame);
 
-      // Lienzo
-      const canvasMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(data.size[0], data.size[1]),
-        new THREE.MeshBasicMaterial({ map: textureLoader.load(data.image) })
-      );
-      canvasMesh.position.z = 0.05;
+      const canvasGeo = new THREE.PlaneGeometry(pWidth, pHeight);
+      const canvasMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+
+      textureLoader.load(data.image, (texture) => {
+        canvasMat.map = texture;
+        canvasMat.color.setHex(0xffffff);
+        canvasMat.needsUpdate = true;
+      });
+
+      const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
+      canvasMesh.position.z = 0.028;
       group.add(canvasMesh);
 
-      // Foco puntual directo enfocado en el lienzo
-      const spotLight = new THREE.SpotLight(0xfffaee, 1.2, 8, Math.PI / 4, 0.4);
-      spotLight.position.set(0, 1.2, 1.8);
-      spotLight.target = canvasMesh;
-      group.add(spotLight);
+      canvasMesh.userData = {
+        title: data.title,
+        artist: data.artist,
+        desc: data.desc,
+        parentGroup: group,
+        width: pWidth
+      };
 
+      interactiveObjects.push(canvasMesh);
       scene.add(group);
 
-      paintingsList.push({
-        position: new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z),
-        info: data
-      });
+      // Crear barrera física y visual
+      createStanchionBarrier(data.pos.x, data.pos.z, pWidth);
     });
 
-    // --- 6. DETECCIÓN DE PROXIMIDAD ---
-    const infoCard = document.getElementById('info-card');
-    const titleEl = document.getElementById('artwork-title');
-    const artistEl = document.getElementById('artist-name');
-    const descEl = document.getElementById('artwork-desc');
+    // --- RAYCASTING E INTERACCIÓN ---
+    const raycaster = new THREE.Raycaster();
+    const centerVector = new THREE.Vector2(0, 0);
+    let hoveredObject = null;
 
-    function checkProximity() {
-      const playerPos = camera.position;
-      let activePainting = null;
+    function checkInteractions() {
+      if (isZoomed) return;
 
-      paintingsList.forEach(item => {
-        if (playerPos.distanceTo(item.position) < 4.0) {
-          activePainting = item.info;
+      raycaster.setFromCamera(centerVector, camera);
+      const intersects = raycaster.intersectObjects(interactiveObjects);
+
+      if (intersects.length > 0 && intersects[0].distance < 6.0) {
+        if (hoveredObject !== intersects[0].object) {
+          hoveredObject = intersects[0].object;
+          crosshair.classList.add('active');
+          promptEl.style.display = 'block';
         }
-      });
-
-      if (activePainting) {
-        titleEl.textContent = activePainting.title;
-        artistEl.textContent = activePainting.artist;
-        descEl.textContent = activePainting.desc;
-        infoCard.style.display = 'block';
       } else {
-        infoCard.style.display = 'none';
+        if (hoveredObject) {
+          hoveredObject = null;
+          crosshair.classList.remove('active');
+          promptEl.style.display = 'none';
+        }
       }
     }
 
-    // --- 7. BUCLE DE ANIMACIÓN ---
+    function zoomToArtwork(artworkMesh) {
+      isZoomed = true;
+      savedCamPos.copy(camera.position);
+
+      crosshair.style.display = 'none';
+      promptEl.style.display = 'none';
+
+      if (!isMobile && controls) controls.unlock();
+
+      const data = artworkMesh.userData;
+      document.getElementById('artwork-title').innerText = data.title;
+      document.getElementById('artist-name').innerText = data.artist;
+      document.getElementById('artwork-desc').innerText = data.desc;
+      infoCard.style.display = 'block';
+
+      const group = data.parentGroup;
+      const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
+      
+      targetCamPos.copy(group.position).add(normal.clone().multiplyScalar(2.2));
+      targetLookAt.copy(group.position);
+
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      currentLookAt.copy(camera.position).add(dir.multiplyScalar(5));
+    }
+
+    function exitZoom() {
+      isZoomed = false;
+      hoveredObject = null;
+
+      camera.position.copy(savedCamPos);
+      
+      infoCard.style.display = 'none';
+      crosshair.style.display = 'block';
+      crosshair.classList.remove('active');
+
+      if (!isMobile && controls) {
+        controls.lock();
+      }
+    }
+
+    closeZoomBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exitZoom();
+    });
+
+    window.addEventListener('click', (e) => {
+      if (!isZoomed && hoveredObject && isGameActive) {
+        zoomToArtwork(hoveredObject);
+      }
+    });
+
+    // --- SISTEMA DE COLISIONES FÍSICAS ---
+    function handleCollisions(prevPos) {
+      const p = camera.position;
+
+      // 1. LÍMITES EN X (SEPARADORES DE LOS CUADROS)
+      const maxX = 3.45;
+      const minX = -3.45;
+      p.x = Math.max(minX, Math.min(maxX, p.x));
+
+      // 2. PAREDES EXTREMAS EN Z
+      const maxZ = roomLength / 2 - 0.6;
+      const minZ = -roomLength / 2 + 0.6;
+      p.z = Math.max(minZ, Math.min(maxZ, p.z));
+
+      // 3. MUROS INTERNOS CON PUERTA (Z = -6 y Z = 6)
+      const doorWidthHalf = 1.35;
+      const wallThickness = 0.25;
+
+      [-6.0, 6.0].forEach(wZ => {
+        if (Math.abs(p.x) > doorWidthHalf) {
+          if (prevPos.z < wZ - wallThickness && p.z >= wZ - wallThickness) {
+            p.z = wZ - wallThickness - 0.01;
+          } else if (prevPos.z > wZ + wallThickness && p.z <= wZ + wallThickness) {
+            p.z = wZ + wallThickness + 0.01;
+          }
+        }
+      });
+
+      // 4. BANCAS DEL MUSEO
+      [-11.5, 11.5].forEach(benchZ => {
+        const minBx = -0.75, maxBx = 0.75;
+        const minBz = benchZ - 1.45, maxBz = benchZ + 1.45;
+
+        if (p.x > minBx && p.x < maxBx && p.z > minBz && p.z < maxBz) {
+          if (prevPos.x <= minBx) p.x = minBx;
+          else if (prevPos.x >= maxBx) p.x = maxBx;
+
+          if (prevPos.z <= minBz) p.z = minBz;
+          else if (prevPos.z >= maxBz) p.z = maxBz;
+        }
+      });
+    }
+
+    // --- BUCLE DE ANIMACIÓN ---
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
-
       const delta = clock.getDelta();
-      const speed = 4.5 * delta;
 
-      if (isGameActive) {
-        if (moveForward !== 0 || moveSide !== 0) {
-          const dir = new THREE.Vector3();
-          camera.getWorldDirection(dir);
-          dir.y = 0;
-          dir.normalize();
+      if (isZoomed) {
+        camera.position.lerp(targetCamPos, 0.05);
+        currentLookAt.lerp(targetLookAt, 0.05);
+        camera.lookAt(currentLookAt);
+      } else if (isGameActive) {
+        const prevPos = camera.position.clone();
 
-          const sideDir = new THREE.Vector3().crossVectors(camera.up, dir).negate();
+        velocityY -= gravity * delta;
+        camera.position.y += velocityY * delta;
 
-          camera.position.addScaledVector(dir, moveForward * speed);
-          camera.position.addScaledVector(sideDir, moveSide * speed);
+        if (camera.position.y <= eyeHeight) {
+          camera.position.y = eyeHeight;
+          velocityY = 0;
+          canJump = true;
         }
 
-        // Colisiones con paredes
-        camera.position.y = 1.7;
-        if (camera.position.x < -4.8) camera.position.x = -4.8;
-        if (camera.position.x > 4.8) camera.position.x = 4.8;
-        if (camera.position.z < -20) camera.position.z = -20;
-        if (camera.position.z > 20) camera.position.z = 20;
+        const moveSpeed = 4.5 * delta;
 
-        checkProximity();
+        if (!isMobile) {
+          if (controls.isLocked) {
+            controls.moveForward(moveForward * moveSpeed);
+            controls.moveRight(moveSide * moveSpeed);
+          }
+        } else {
+          currentLon += (targetLon - currentLon) * 0.15;
+          currentLat += (targetLat - currentLat) * 0.15;
+
+          const phi = THREE.MathUtils.degToRad(90 - currentLat);
+          const theta = THREE.MathUtils.degToRad(currentLon);
+
+          const targetDirection = new THREE.Vector3(
+            Math.sin(phi) * Math.cos(theta),
+            Math.cos(phi),
+            Math.sin(phi) * Math.sin(theta)
+          );
+
+          camera.lookAt(camera.position.clone().add(targetDirection));
+
+          if (moveForward !== 0 || moveSide !== 0) {
+            const forward = new THREE.Vector3(targetDirection.x, 0, targetDirection.z).normalize();
+            const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
+
+            camera.position.addScaledVector(forward, moveForward * moveSpeed);
+            camera.position.addScaledVector(right, moveSide * moveSpeed);
+          }
+        }
+
+        handleCollisions(prevPos);
+        checkInteractions();
       }
 
       renderer.render(scene, camera);
     }
-
-    animate();
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    animate();
   </script>
 </body>
 </html>
